@@ -165,7 +165,7 @@ class TaskManager:
             while parent != self.base_path and not any(parent.iterdir()):
                 parent.rmdir()
                 parent = parent.parent
-        except:
+        except Exception:
             pass
         
         return True
@@ -252,9 +252,9 @@ class TaskManager:
                                 'metadata': {k: v for k, v in post.metadata.items() 
                                            if k in ['status', 'priority', 'tags']}
                             })
-                        except:
+                        except Exception:
                             continue
-            except:
+            except Exception:
                 pass
             
             return tree
@@ -287,7 +287,7 @@ class TaskManager:
             while parent != self.base_path and not any(parent.iterdir()):
                 parent.rmdir()
                 parent = parent.parent
-        except:
+        except Exception:
             pass
         
         return True
