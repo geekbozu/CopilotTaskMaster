@@ -39,6 +39,7 @@ dev = [
 
 [project.scripts]
 taskmaster = "taskmaster.cli:main"
+taskmaster-mcp = "taskmaster.mcp_server:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
