@@ -9,6 +9,10 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Optional tag to use for image (e.g., v1.2.3). If provided, the image will be tagged with this value."
+        required: false
 
 permissions:
   contents: read
@@ -35,6 +39,43 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set image name and ref (lowercase)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Lowercase the repository name (owner/repo) for a valid image name
+          IMAGE_BASE="ghcr.io/${GITHUB_REPOSITORY,,}"
+          REF_NAME=""
+
+          if [ "$GITHUB_EVENT_NAME" = "release" ]; then
+            # Prefer the release tag from the event payload if available
+            if [ -n "${{ github.event.release.tag_name }}" ]; then
+              REF_NAME="${{ github.event.release.tag_name }}"
+            else
+              REF_NAME="${GITHUB_REF#refs/tags/}"
+            fi
+
+          elif [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            # If the manual run provided a `tag` input, use it; otherwise derive from ref
+            if [ -n "${{ github.event.inputs.tag }}" ]; then
+              REF_NAME="${{ github.event.inputs.tag }}"
+            else
+              REF_NAME="${GITHUB_REF#refs/*/}"
+            fi
+
+          else
+            REF_NAME="${GITHUB_REF#refs/*/}"
+          fi
+
+          # Lowercase and sanitize the ref name (replace slashes with dashes)
+          REF_NAME="${REF_NAME,,}"
+          REF_NAME="${REF_NAME//\//-}"
+
+          echo "IMAGE_BASE=$IMAGE_BASE" >> $GITHUB_ENV
+          echo "REF_NAME=$REF_NAME" >> $GITHUB_ENV
+          echo "Computed IMAGE_BASE=$IMAGE_BASE"
+          echo "Computed REF_NAME=$REF_NAME"
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
@@ -43,15 +84,15 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ github.sha }}
-            ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            ${{ env.IMAGE_BASE }}:latest
+            ${{ env.IMAGE_BASE }}:${{ github.sha }}
+            ${{ env.IMAGE_BASE }}:${{ env.REF_NAME }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Image info
         run: |
           echo "Published images:"
-          echo " - ghcr.io/${{ github.repository }}:latest"
-          echo " - ghcr.io/${{ github.repository }}:${{ github.sha }}"
-          echo " - ghcr.io/${{ github.repository }}:${{ github.ref_name }}"
+          echo " - ${{ env.IMAGE_BASE }}:latest"
+          echo " - ${{ env.IMAGE_BASE }}:${{ github.sha }}"
+          echo " - ${{ env.IMAGE_BASE }}:${{ env.REF_NAME }}"
