@@ -36,3 +36,21 @@ taskmaster update task1.md --project backend --status done --add-tag reviewed
 taskmaster move task1.md completed/task1.md --project backend
 ```
 
+**Show Tree (scoped):**
+```bash
+# Show entire workspace tree
+taskmaster tree
+
+# Show project-scoped tree
+taskmaster tree --project backend
+```
+
+**List Tags (scoped):**
+```bash
+# All tags across workspace
+taskmaster tags
+
+# Tags for a specific project
+taskmaster tags --project backend
+```
+

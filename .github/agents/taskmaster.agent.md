@@ -35,3 +35,14 @@ This agent acts as an engineering task-board manager using the TaskMaster MCP se
 **Move Task:**
 #tool:move_task
 {"old_path": "task1.md", "new_path": "completed/task1.md", "project": "backend"}
+
+**Get Project Tree:**
+```json
+{"path": "", "project": "backend"}
+```
+
+**Get Tags (scoped):**
+```json
+{"project": "backend"}
+```
+

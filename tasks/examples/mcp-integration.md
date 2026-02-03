@@ -27,9 +27,9 @@ Implement Model Context Protocol server for seamless LLM interaction.
 - [x] delete_task
 - [x] list_tasks
 - [x] search_tasks
-- [x] get_structure
+- [x] get_structure (supports optional `project` argument to scope the returned tree)
 - [x] move_task
-- [x] get_all_tags
+- [x] get_all_tags (supports optional `project` argument to scope tags)
 
 ## Testing Checklist
 - [ ] Test with Claude Desktop

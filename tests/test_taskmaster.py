@@ -231,12 +231,45 @@ def test_get_structure(temp_tasks_dir):
     assert len(structure['children']) > 0
 
 
+def test_get_structure_with_project_param(temp_tasks_dir):
+    """Test get_structure when project is passed explicitly"""
+    manager = TaskManager(temp_tasks_dir)
+
+    manager.create_task("project1/task1.md", "Task 1")
+    manager.create_task("project1/subtasks/task2.md", "Task 2")
+
+    structure = manager.get_structure(project="project1")
+
+    assert structure['type'] == 'directory'
+    assert structure['name'] == 'project1'
+
+    def collect_paths(tree):
+        ps = []
+        for c in tree.get('children', []):
+            if c.get('type') == 'task':
+                ps.append(c.get('path'))
+            elif c.get('type') == 'directory':
+                ps.extend(collect_paths(c))
+        return ps
+
+    paths = collect_paths(structure)
+    assert any('project1/' in p for p in paths)
+
+
+def test_get_structure_project_not_found_raises(temp_tasks_dir):
+    """Requesting a non-existent project should raise ValueError"""
+    manager = TaskManager(temp_tasks_dir)
+
+    with pytest.raises(ValueError):
+        manager.get_structure(project="no_such_project")
+
+
 def test_tags(temp_tasks_dir):
     """Test tag operations"""
     manager = TaskManager(temp_tasks_dir)
     searcher = TaskSearcher(temp_tasks_dir)
     
-    # Create tasks with tags (explicit project required now)
+    # Create tasks with tags in one project
     manager.create_task(
         "task1.md",
         "Task 1",
@@ -249,13 +282,36 @@ def test_tags(temp_tasks_dir):
         metadata={"tags": ["javascript", "frontend"]},
         project="tagsproj"
     )
+
+    # Create a task with tags in another project to ensure scoping works
+    manager.create_task(
+        "task3.md",
+        "Task 3",
+        metadata={"tags": ["go", "backend"]},
+        project="otherproj"
+    )
     
-    # Get all tags
+    # Get all tags (global)
     tags = searcher.get_all_tags()
     assert "python" in tags
     assert "backend" in tags
     assert "javascript" in tags
     assert "frontend" in tags
+    assert "go" in tags
+
+    # Get tags scoped to tagsproj
+    tags_tagsproj = searcher.get_all_tags(project="tagsproj")
+    assert "python" in tags_tagsproj
+    assert "javascript" in tags_tagsproj
+    assert "go" not in tags_tagsproj
+
+
+def test_get_all_tags_project_not_found_returns_empty(temp_tasks_dir):
+    """Requesting tags for a non-existent project returns an empty set"""
+    searcher = TaskSearcher(temp_tasks_dir)
+
+    tags = searcher.get_all_tags(project="no_such_proj")
+    assert tags == set()
 
 
 def test_requires_project_when_missing(temp_tasks_dir):

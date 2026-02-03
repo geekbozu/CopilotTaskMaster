@@ -148,16 +148,28 @@ class TaskSearcher:
 
         return results
     
-    def get_all_tags(self) -> Set[str]:
+    def get_all_tags(self, project: Optional[str] = None) -> Set[str]:
         """
-        Get all unique tags across all tasks
+        Get all unique tags, optionally scoped to a project directory
+        
+        Args:
+            project: Optional project name to scope tag collection
         
         Returns:
             Set of all tags
         """
         tags = set()
+
+        # Determine search root based on project param
+        if project:
+            search_root = self.base_path / project
+            if not search_root.exists():
+                return tags
+            iterator = search_root.glob("**/*.md")
+        else:
+            iterator = self.base_path.glob("**/*.md")
         
-        for md_file in self.base_path.glob("**/*.md"):
+        for md_file in iterator:
             try:
                 with open(md_file, 'r', encoding='utf-8') as f:
                     post = frontmatter.load(f)

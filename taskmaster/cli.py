@@ -274,12 +274,13 @@ def search(ctx, query, status, priority, tags, path_pattern, max_results, full):
 
 
 @main.command()
+@click.option('--project', default=None, help='Project name to scope operation')
 @click.pass_context
-def tags(ctx):
+def tags(ctx, project):
     """List all tags"""
     searcher = ctx.obj['searcher']
     
-    all_tags = searcher.get_all_tags()
+    all_tags = searcher.get_all_tags(project=project)
     
     if not all_tags:
         click.echo("No tags found.")
@@ -312,6 +313,18 @@ def move(ctx, old_path, new_path, project):
     else:
         click.echo(f"✗ Failed to move task", err=True)
         sys.exit(1)
+
+
+@main.command(name="mcp-server")
+@click.pass_context
+def mcp_server_cmd(ctx):
+    """Start the MCP server for LLM integration"""
+    from .mcp_server import main as run_mcp
+    
+    # Pass the tasks directory to the MCP server via environment variable
+    os.environ['TASKMASTER_TASKS_DIR'] = ctx.obj['tasks_dir']
+    
+    run_mcp()
 
 
 if __name__ == '__main__':

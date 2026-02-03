@@ -282,18 +282,46 @@ class TaskManager:
 
         return tasks
     
-    def get_structure(self, subpath: str = "") -> Dict[str, Any]:
+    def get_structure(self, subpath: str = "", project: Optional[str] = None) -> Dict[str, Any]:
         """
         Get the hierarchical structure of tasks
         
         Args:
-            subpath: Subdirectory within base_path
+            subpath: Subdirectory within base_path or a project/subpath when `project` is omitted
+            project: Optional project name to scope the structure
         
         Returns:
             Nested dictionary representing folder structure
         """
-        search_path = self.base_path / subpath if subpath else self.base_path
-        
+        # Resolve search path similarly to `list_tasks` to support the same CLI semantics
+        if subpath:
+            sp = Path(subpath)
+            if project is None:
+                # If subpath looks like 'project/...' or a single project name, take it as the project
+                if len(sp.parts) >= 2:
+                    project = sp.parts[0]
+                    sub = Path(*sp.parts[1:])
+                else:
+                    project = sp.parts[0]
+                    sub = Path()
+            else:
+                sub = Path(subpath)
+        else:
+            sub = Path()
+
+        # Validate relative path usage
+        if any(part == ".." for part in sub.parts):
+            raise ValueError("path must not contain parent references")
+
+        if project is None:
+            search_path = self.base_path
+        else:
+            search_path = self.base_path / project / sub
+
+        if project is not None and not search_path.exists():
+            # Signal a project resolution failure to callers (CLI / MCP handlers expect ValueError)
+            raise ValueError(f"project '{project}' not found")
+
         def build_tree(path: Path) -> Dict[str, Any]:
             tree = {
                 'type': 'directory',

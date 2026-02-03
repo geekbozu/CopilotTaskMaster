@@ -16,10 +16,18 @@ from .search import TaskSearcher
 # Initialize server
 app = Server("taskmaster")
 
-# Initialize managers
-tasks_dir = os.environ.get('TASKMASTER_TASKS_DIR', './tasks')
-task_manager = TaskManager(tasks_dir)
-task_searcher = TaskSearcher(tasks_dir)
+# Managers (initialized on demand)
+_task_manager = None
+_task_searcher = None
+
+def get_managers():
+    """Get or initialize the task manager and searcher"""
+    global _task_manager, _task_searcher
+    if _task_manager is None:
+        tasks_dir = os.environ.get('TASKMASTER_TASKS_DIR', './tasks')
+        _task_manager = TaskManager(tasks_dir)
+        _task_searcher = TaskSearcher(tasks_dir)
+    return _task_manager, _task_searcher
 
 
 @app.list_tools()
@@ -249,6 +257,7 @@ async def list_tools() -> List[Tool]:
 @app.call_tool()
 async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
     """Handle tool calls from the LLM"""
+    task_manager, task_searcher = get_managers()
     
     try:
         if name == "create_task":
@@ -442,7 +451,7 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             )]
         
         elif name == "get_all_tags":
-            tags = task_searcher.get_all_tags()
+            tags = task_searcher.get_all_tags(project=arguments.get('project'))
             
             if not tags:
                 return [TextContent(type="text", text="No tags found.")]
