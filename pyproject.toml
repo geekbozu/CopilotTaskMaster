@@ -3,7 +3,7 @@ requires = ["setuptools>=45", "wheel", "setuptools-scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "copilot-taskmaster"
+name = "CopilotTaskMaster"
 version = "0.1.0"
 description = "Python tools for managing markdown task cards with MCP integration"
 readme = "README.md"
