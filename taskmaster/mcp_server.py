@@ -28,13 +28,13 @@ async def list_tools() -> List[Tool]:
     return [
         Tool(
             name="create_task",
-            description="Create a new task card in markdown format",
+            description="Create a new task card in markdown format. Path MUST include a project folder (e.g., 'project1/task1.md', not 'task1.md').",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "path": {
                         "type": "string",
-                        "description": "Relative path for the task (e.g., 'project1/task1.md')"
+                        "description": "Relative path for the task (e.g., 'project1/task1.md'). MUST include a project folder as the top-level directory."
                     },
                     "title": {
                         "type": "string",
@@ -65,13 +65,13 @@ async def list_tools() -> List[Tool]:
         ),
         Tool(
             name="read_task",
-            description="Read a task card by its path",
+            description="Read a task card by its path. Path MUST include a project folder.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "path": {
                         "type": "string",
-                        "description": "Relative path to the task"
+                        "description": "Relative path to the task. MUST include a project folder (e.g., 'project1/task1.md')."
                     }
                 },
                 "required": ["path"]
@@ -79,13 +79,13 @@ async def list_tools() -> List[Tool]:
         ),
         Tool(
             name="update_task",
-            description="Update an existing task card",
+            description="Update an existing task card. Path MUST include a project folder.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "path": {
                         "type": "string",
-                        "description": "Relative path to the task"
+                        "description": "Relative path to the task. MUST include a project folder (e.g., 'project1/task1.md')."
                     },
                     "title": {
                         "type": "string",
@@ -105,13 +105,13 @@ async def list_tools() -> List[Tool]:
         ),
         Tool(
             name="delete_task",
-            description="Delete a task card",
+            description="Delete a task card. Path MUST include a project folder.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "path": {
                         "type": "string",
-                        "description": "Relative path to the task"
+                        "description": "Relative path to the task. MUST include a project folder (e.g., 'project1/task1.md')."
                     }
                 },
                 "required": ["path"]
@@ -190,17 +190,17 @@ async def list_tools() -> List[Tool]:
         ),
         Tool(
             name="move_task",
-            description="Move or rename a task",
+            description="Move or rename a task. Both paths MUST include a project folder.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "old_path": {
                         "type": "string",
-                        "description": "Current path"
+                        "description": "Current path. MUST include a project folder (e.g., 'project1/task1.md')."
                     },
                     "new_path": {
                         "type": "string",
-                        "description": "New path"
+                        "description": "New path. MUST include a project folder (e.g., 'project1/newtask.md')."
                     }
                 },
                 "required": ["old_path", "new_path"]

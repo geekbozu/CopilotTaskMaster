@@ -191,12 +191,12 @@ def test_tags(temp_tasks_dir):
     
     # Create tasks with tags
     manager.create_task(
-        "task1.md",
+        "project1/task1.md",
         "Task 1",
         metadata={"tags": ["python", "backend"]}
     )
     manager.create_task(
-        "task2.md",
+        "project1/task2.md",
         "Task 2",
         metadata={"tags": ["javascript", "frontend"]}
     )
@@ -207,3 +207,117 @@ def test_tags(temp_tasks_dir):
     assert "backend" in tags
     assert "javascript" in tags
     assert "frontend" in tags
+
+
+def test_path_validation_create_task(temp_tasks_dir):
+    """Test that create_task requires a project folder in path"""
+    manager = TaskManager(temp_tasks_dir)
+    
+    # Valid path with project folder should work
+    result = manager.create_task("project1/task1.md", "Valid Task")
+    assert result['path'] == "project1/task1.md"
+    
+    # Invalid path without project folder should raise ValueError
+    with pytest.raises(ValueError) as exc_info:
+        manager.create_task("task1.md", "Invalid Task")
+    
+    assert "project folder" in str(exc_info.value).lower()
+    assert "task1.md" in str(exc_info.value)
+
+
+def test_path_validation_read_task(temp_tasks_dir):
+    """Test that read_task requires a project folder in path"""
+    manager = TaskManager(temp_tasks_dir)
+    
+    # Create a valid task first
+    manager.create_task("project1/task1.md", "Test Task")
+    
+    # Valid path should work
+    task = manager.read_task("project1/task1.md")
+    assert task is not None
+    
+    # Invalid path without project folder should raise ValueError
+    with pytest.raises(ValueError) as exc_info:
+        manager.read_task("task1.md")
+    
+    assert "project folder" in str(exc_info.value).lower()
+
+
+def test_path_validation_update_task(temp_tasks_dir):
+    """Test that update_task requires a project folder in path"""
+    manager = TaskManager(temp_tasks_dir)
+    
+    # Create a valid task first
+    manager.create_task("project1/task1.md", "Test Task")
+    
+    # Valid path should work
+    result = manager.update_task("project1/task1.md", title="Updated Task")
+    assert result is not None
+    
+    # Invalid path without project folder should raise ValueError
+    with pytest.raises(ValueError) as exc_info:
+        manager.update_task("task1.md", title="Invalid Update")
+    
+    assert "project folder" in str(exc_info.value).lower()
+
+
+def test_path_validation_delete_task(temp_tasks_dir):
+    """Test that delete_task requires a project folder in path"""
+    manager = TaskManager(temp_tasks_dir)
+    
+    # Create a valid task first
+    manager.create_task("project1/task1.md", "Test Task")
+    
+    # Invalid path without project folder should raise ValueError
+    with pytest.raises(ValueError) as exc_info:
+        manager.delete_task("task1.md")
+    
+    assert "project folder" in str(exc_info.value).lower()
+    
+    # Valid path should work
+    success = manager.delete_task("project1/task1.md")
+    assert success is True
+
+
+def test_path_validation_move_task(temp_tasks_dir):
+    """Test that move_task requires a project folder in both paths"""
+    manager = TaskManager(temp_tasks_dir)
+    
+    # Create a valid task first
+    manager.create_task("project1/task1.md", "Test Task")
+    
+    # Valid paths should work
+    success = manager.move_task("project1/task1.md", "project2/task1.md")
+    assert success is True
+    
+    # Create another task for testing invalid paths
+    manager.create_task("project1/task2.md", "Test Task 2")
+    
+    # Invalid old_path without project folder should raise ValueError
+    with pytest.raises(ValueError) as exc_info:
+        manager.move_task("task2.md", "project1/task3.md")
+    
+    assert "project folder" in str(exc_info.value).lower()
+    
+    # Invalid new_path without project folder should raise ValueError
+    with pytest.raises(ValueError) as exc_info:
+        manager.move_task("project1/task2.md", "task3.md")
+    
+    assert "project folder" in str(exc_info.value).lower()
+
+
+def test_path_validation_with_subdirectories(temp_tasks_dir):
+    """Test that paths with multiple levels still work"""
+    manager = TaskManager(temp_tasks_dir)
+    
+    # Valid path with multiple subdirectories should work
+    result = manager.create_task(
+        "project1/features/auth/task1.md", 
+        "Multi-level Task"
+    )
+    assert result['path'] == "project1/features/auth/task1.md"
+    
+    # Can read it back
+    task = manager.read_task("project1/features/auth/task1.md")
+    assert task is not None
+    assert task['title'] == "Multi-level Task"

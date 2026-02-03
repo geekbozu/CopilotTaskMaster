@@ -25,6 +25,27 @@ class TaskManager:
         self.base_path = Path(base_path).resolve()
         self.base_path.mkdir(parents=True, exist_ok=True)
     
+    def _validate_path_has_project(self, path: str) -> None:
+        """
+        Validate that a path includes a project (top-level folder)
+        
+        Args:
+            path: Relative path to validate
+        
+        Raises:
+            ValueError: If path doesn't include a project folder
+        """
+        # Normalize path separators and remove leading/trailing slashes
+        normalized_path = path.replace('\\', '/').strip('/')
+        
+        # Check if path contains at least one directory separator
+        if '/' not in normalized_path:
+            raise ValueError(
+                f"Task path must include a project folder. "
+                f"Invalid path: '{path}'. "
+                f"Expected format: 'project/task.md' or 'project/subfolder/task.md'"
+            )
+    
     def create_task(
         self, 
         path: str, 
@@ -37,13 +58,20 @@ class TaskManager:
         
         Args:
             path: Relative path within base_path (e.g., 'project1/task1.md')
+                  Must include a project folder (top-level directory)
             title: Task title
             content: Task content (markdown)
             metadata: Additional metadata (status, priority, tags, etc.)
         
         Returns:
             Dict with task information
+        
+        Raises:
+            ValueError: If path doesn't include a project folder
         """
+        # Validate path includes a project folder
+        self._validate_path_has_project(path)
+        
         full_path = self.base_path / path
         
         # Ensure parent directories exist
@@ -75,10 +103,17 @@ class TaskManager:
         
         Args:
             path: Relative path within base_path
+                  Must include a project folder (top-level directory)
         
         Returns:
             Dict with task information or None if not found
+        
+        Raises:
+            ValueError: If path doesn't include a project folder
         """
+        # Validate path includes a project folder
+        self._validate_path_has_project(path)
+        
         full_path = self.base_path / path
         
         if not full_path.exists():
@@ -106,13 +141,20 @@ class TaskManager:
         
         Args:
             path: Relative path within base_path
+                  Must include a project folder (top-level directory)
             title: New title (optional)
             content: New content (optional)
             metadata: Metadata to update (merged with existing)
         
         Returns:
             Dict with updated task information or None if not found
+        
+        Raises:
+            ValueError: If path doesn't include a project folder
         """
+        # Validate path includes a project folder
+        self._validate_path_has_project(path)
+        
         full_path = self.base_path / path
         
         if not full_path.exists():
@@ -148,10 +190,17 @@ class TaskManager:
         
         Args:
             path: Relative path within base_path
+                  Must include a project folder (top-level directory)
         
         Returns:
             True if deleted, False if not found
+        
+        Raises:
+            ValueError: If path doesn't include a project folder
         """
+        # Validate path includes a project folder
+        self._validate_path_has_project(path)
+        
         full_path = self.base_path / path
         
         if not full_path.exists():
@@ -267,11 +316,20 @@ class TaskManager:
         
         Args:
             old_path: Current relative path
+                      Must include a project folder (top-level directory)
             new_path: New relative path
+                      Must include a project folder (top-level directory)
         
         Returns:
             True if moved, False if source not found or destination exists
+        
+        Raises:
+            ValueError: If either path doesn't include a project folder
         """
+        # Validate both paths include a project folder
+        self._validate_path_has_project(old_path)
+        self._validate_path_has_project(new_path)
+        
         old_full = self.base_path / old_path
         new_full = self.base_path / new_path
         
