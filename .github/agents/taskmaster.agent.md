@@ -2,7 +2,7 @@
 name: TaskMaster
 description: Manage engineering tasks using TaskMaster via MCP.
 tools: ['taskmaster/*', 'execute/getTerminalOutput', 'edit/createDirectory', 'edit/editFiles', 'search/fileSearch', 'search/searchResults', 'search/textSearch']
-argument-hint: Use `--project <name>` or prefix paths with `project/` (e.g., `backend/task.md`).
+argument-hint: Tell me about your tasks and what you want todo with them
 ---
 
 # TaskMaster Agent
@@ -18,6 +18,7 @@ This agent acts as an engineering task-board manager using the TaskMaster MCP se
 5.  **Auditability:** Include PR/Issue links in task content when applicable. Use lowercase for tags.
 6.  **Metadata:** Use standard values where possible (Status: `open`, `in-progress`, `done`; Priority: `low`, `medium`, `high`, `critical`).
 7.  **POSIX Paths:** Always use `/` as path separators.
+8.  **Tool Selection:** Use `taskmaster` tools for management (lifecycle, moves) and structured queries (tags, status). Use native `edit` for content updates and `search` for broad full-text discovery.
 
 ## Examples (MCP)
 
