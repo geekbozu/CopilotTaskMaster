@@ -66,3 +66,53 @@ def test_cli_version():
     res = runner.invoke(main, ['--version'])
     assert res.exit_code == 0
     assert __version__ in res.output
+
+
+def test_create_without_args_shows_help(temp_tasks_dir):
+    """Test that create command shows help text when invoked without arguments"""
+    runner = CliRunner()
+    result = runner.invoke(main, ['--tasks-dir', temp_tasks_dir, 'create'])
+    assert result.exit_code == 0
+    assert 'Usage: main create' in result.output
+    assert 'Create a new task card' in result.output
+    assert 'Creates a markdown file with YAML frontmatter' in result.output
+
+
+def test_show_without_args_shows_help(temp_tasks_dir):
+    """Test that show command shows help text when invoked without arguments"""
+    runner = CliRunner()
+    result = runner.invoke(main, ['--tasks-dir', temp_tasks_dir, 'show'])
+    assert result.exit_code == 0
+    assert 'Usage: main show' in result.output
+    assert 'Show a task card' in result.output
+    assert "Displays the task's metadata" in result.output
+
+
+def test_update_without_args_shows_help(temp_tasks_dir):
+    """Test that update command shows help text when invoked without arguments"""
+    runner = CliRunner()
+    result = runner.invoke(main, ['--tasks-dir', temp_tasks_dir, 'update'])
+    assert result.exit_code == 0
+    assert 'Usage: main update' in result.output
+    assert 'Update a task card' in result.output
+    assert "Modifies an existing task's metadata" in result.output
+
+
+def test_delete_without_args_shows_help(temp_tasks_dir):
+    """Test that delete command shows help text when invoked without arguments"""
+    runner = CliRunner()
+    result = runner.invoke(main, ['--tasks-dir', temp_tasks_dir, 'delete'])
+    assert result.exit_code == 0
+    assert 'Usage: main delete' in result.output
+    assert 'Delete a task card' in result.output
+    assert 'Permanently removes a task file' in result.output
+
+
+def test_move_without_args_shows_help(temp_tasks_dir):
+    """Test that move command shows help text when invoked without arguments"""
+    runner = CliRunner()
+    result = runner.invoke(main, ['--tasks-dir', temp_tasks_dir, 'move'])
+    assert result.exit_code == 0
+    assert 'Usage: main move' in result.output
+    assert 'Move/rename a task' in result.output
+    assert 'Moves a task file to a new location' in result.output

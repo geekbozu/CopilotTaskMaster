@@ -29,8 +29,8 @@ def main(ctx, tasks_dir):
 
 
 @main.command()
-@click.argument('path')
-@click.argument('title')
+@click.argument('path', required=False)
+@click.argument('title', required=False)
 @click.option('--content', default="", help='Task content')
 @click.option('--status', default='open', help='Task status')
 @click.option('--priority', default='medium', help='Task priority')
@@ -38,7 +38,16 @@ def main(ctx, tasks_dir):
 @click.option('--project', default=None, help='Project name to scope operation')
 @click.pass_context
 def create(ctx, path, title, content, status, priority, tags, project):
-    """Create a new task card"""
+    """Create a new task card.
+    
+    Creates a markdown file with YAML frontmatter containing task metadata.
+    The PATH should include the filename (e.g., 'backend/auth.md').
+    Project can be specified via --project flag or as a path prefix.
+    """
+    if path is None or title is None:
+        click.echo(ctx.get_help())
+        sys.exit(0)
+    
     manager = ctx.obj['manager']
     
     metadata = {
@@ -63,12 +72,20 @@ def create(ctx, path, title, content, status, priority, tags, project):
 
 
 @main.command()
-@click.argument('path')
+@click.argument('path', required=False)
 @click.option('--full', is_flag=True, help='Show full content')
 @click.option('--project', default=None, help='Project name to scope operation')
 @click.pass_context
 def show(ctx, path, full, project):
-    """Show a task card"""
+    """Show a task card.
+    
+    Displays the task's metadata (title, status, priority, tags) and optionally
+    the full content with --full flag. PATH should be relative to project root.
+    """
+    if path is None:
+        click.echo(ctx.get_help())
+        sys.exit(0)
+    
     manager = ctx.obj['manager']
     
     from .utils import project_resolution_error_msg
@@ -94,7 +111,7 @@ def show(ctx, path, full, project):
 
 
 @main.command()
-@click.argument('path')
+@click.argument('path', required=False)
 @click.option('--title', default=None, help='New title')
 @click.option('--content', default=None, help='New content')
 @click.option('--status', default=None, help='New status')
@@ -103,7 +120,15 @@ def show(ctx, path, full, project):
 @click.option('--project', default=None, help='Project name to scope operation')
 @click.pass_context
 def update(ctx, path, title, content, status, priority, add_tag, project):
-    """Update a task card"""
+    """Update a task card.
+    
+    Modifies an existing task's metadata or content. You can update title, content,
+    status, priority, or add tags. Only specified fields will be updated.
+    """
+    if path is None:
+        click.echo(ctx.get_help())
+        sys.exit(0)
+    
     manager = ctx.obj['manager']
     
     metadata = {}
@@ -137,11 +162,18 @@ def update(ctx, path, title, content, status, priority, add_tag, project):
 
 
 @main.command()
-@click.argument('path')
+@click.argument('path', required=False)
 @click.option('--project', default=None, help='Project name to scope operation')
 @click.pass_context
 def delete(ctx, path, project):
-    """Delete a task card"""
+    """Delete a task card.
+    
+    Permanently removes a task file from the filesystem. This action cannot be undone.
+    """
+    if path is None:
+        click.echo(ctx.get_help())
+        sys.exit(0)
+    
     manager = ctx.obj['manager']
     
     from .utils import project_resolution_error_msg
@@ -166,7 +198,12 @@ def delete(ctx, path, project):
 @click.option('--project', default=None, help='Project name to scope operation')
 @click.pass_context
 def list(ctx, subpath, recursive, full, project):
-    """List all tasks"""
+    """List all tasks.
+    
+    Shows all tasks in the workspace or within a specific project/subpath.
+    Use --project to scope to a project, --subpath to narrow to a directory,
+    and --full to include content previews.
+    """
     manager = ctx.obj['manager']
     
     from .utils import project_resolution_error_msg
@@ -200,7 +237,11 @@ def list(ctx, subpath, recursive, full, project):
 @click.option('--project', default=None, help='Project name to scope operation')
 @click.pass_context
 def tree(ctx, subpath, project):
-    """Show hierarchical structure of tasks"""
+    """Show hierarchical structure of tasks.
+    
+    Displays a tree view of the task workspace showing folders and task files.
+    Use --project to scope to a specific project.
+    """
     manager = ctx.obj['manager']
     
     from .utils import project_resolution_error_msg
@@ -238,7 +279,11 @@ def tree(ctx, subpath, project):
 @click.option('--full', is_flag=True, help='Show full content')
 @click.pass_context
 def search(ctx, query, status, priority, tags, path_pattern, max_results, full):
-    """Search for tasks"""
+    """Search for tasks.
+    
+    Performs full-text search across task titles and content, with optional
+    filters for metadata (status, priority, tags). Returns ranked results.
+    """
     searcher = ctx.obj['searcher']
     
     metadata_filters = {}
@@ -279,7 +324,10 @@ def search(ctx, query, status, priority, tags, path_pattern, max_results, full):
 @click.option('--project', default=None, help='Project name to scope operation')
 @click.pass_context
 def tags(ctx, project):
-    """List all tags"""
+    """List all tags.
+    
+    Shows all unique tags used across tasks. Use --project to scope to a specific project.
+    """
     searcher = ctx.obj['searcher']
     
     all_tags = searcher.get_all_tags(project=project)
@@ -294,12 +342,20 @@ def tags(ctx, project):
 
 
 @main.command()
-@click.argument('old_path')
-@click.argument('new_path')
+@click.argument('old_path', required=False)
+@click.argument('new_path', required=False)
 @click.option('--project', default=None, help='Project name to scope operation')
 @click.pass_context
 def move(ctx, old_path, new_path, project):
-    """Move/rename a task"""
+    """Move/rename a task.
+    
+    Moves a task file to a new location or renames it. The task's content and
+    metadata are preserved. Directories are created as needed.
+    """
+    if old_path is None or new_path is None:
+        click.echo(ctx.get_help())
+        sys.exit(0)
+    
     manager = ctx.obj['manager']
     
     from .utils import project_resolution_error_msg
@@ -320,7 +376,11 @@ def move(ctx, old_path, new_path, project):
 @main.command(name="mcp-server")
 @click.pass_context
 def mcp_server_cmd(ctx):
-    """Start the MCP server for LLM integration"""
+    """Start the MCP server for LLM integration.
+    
+    Starts a Model Context Protocol (MCP) server that exposes task management
+    functionality as tools for AI assistants and LLMs.
+    """
     from .mcp_server import main as run_mcp
     
     # Pass the tasks directory to the MCP server via environment variable
