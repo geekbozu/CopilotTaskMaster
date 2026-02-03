@@ -10,29 +10,52 @@ Markdown-based task management for humans and AI agents. Manage tasks via CLI or
 - **Dual Interface:** Full parity between CLI and MCP server tools.
 - **Hierarchical:** Supports nested subpaths and tag-based filtering.
 
-## Installation
+## Quick Start
 
-### From Source
+### 1. Install
 ```bash
-git clone https://github.com/geekbozu/CopilotTaskMaster.git
-cd CopilotTaskMaster
-pip install -e .
+pip install CopilotTaskMaster
 ```
 
-### Via Docker
+### 2. Create your first task
+```bash
+taskmaster create my-project/todo.md "My First Task" --status open --priority high
+```
+
+### 3. List tasks
+```bash
+taskmaster list --project my-project
+```
+
+## Copilot Integration
+
+This repository includes pre-configured GitHub Copilot agents in the [.github/agents/](.github/agents/) directory. These agents provide tailored instructions and tool access for managing tasks directly from Copilot Chat.
+
+- **[TaskMaster Agent](.github/agents/taskmaster.agent.md):** Best for use with the MCP server.
+- **[TaskMaster CLI Agent](.github/agents/taskmaster-cli.agent.md):** Best for use when you prefer the CLI or MCP is not available.
+
+To use these agents, ensure you have the GitHub Copilot extension installed in VS Code and follow the official documentation:
+- [Creating custom agents](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/coding-agent/create-custom-agents)
+- [Custom agents configuration reference](https://docs.github.com/en/copilot/reference/custom-agents-configuration)
+
+---
+
+## Technical Details & Reference
+
+### Installation Options
+
+#### Via PyPI
+```bash
+pip install CopilotTaskMaster
+```
+
+#### Via Docker
 Pull the pre-built image from GHCR:
 ```bash
 docker pull ghcr.io/geekbozu/copilottaskmaster:latest
 ```
 
-Or build locally:
-```bash
-docker build -t taskmaster .
-```
-
-## Usage
-
-### CLI Basics
+### CLI Reference
 All operations require a **project** scope, either via `--project` or as a path prefix.
 
 ```bash
@@ -82,18 +105,7 @@ Tool details (selected):
 - `get_structure(subpath: str = "", project: Optional[str] = None)`: Return hierarchical folder/task structure. When `project` is provided, the structure is scoped to that project (raises ValueError if the project does not exist).
 - `get_all_tags(project: Optional[str] = None)`: Return the set of tags used across tasks. When `project` is provided, tags are collected only from that project's tasks (returns empty set if the project does not exist).
 
-## Copilot Integration
-
-This repository includes pre-configured GitHub Copilot agents in the [.github/agents/](.github/agents/) directory. These agents provide tailored instructions and tool access for managing tasks directly from Copilot Chat.
-
-- **[TaskMaster Agent](.github/agents/taskmaster.agent.md):** Best for use with the MCP server.
-- **[TaskMaster CLI Agent](.github/agents/taskmaster-cli.agent.md):** Best for use when you prefer the CLI or MCP is not available.
-
-To use these agents, ensure you have the GitHub Copilot extension installed in VS Code and follow the official documentation:
-- [Creating custom agents](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/coding-agent/create-custom-agents)
-- [Custom agents configuration reference](https://docs.github.com/en/copilot/reference/custom-agents-configuration)
-
-## Task Format
+### Task Format
 Tasks are standard Markdown files:
 
 ```markdown
@@ -108,11 +120,25 @@ tags: [auth, security]
 - [ ] Hash Passwords
 ```
 
-## Configuration
+### Configuration
 - `TASKMASTER_TASKS_DIR`: Path to storage (default: `./tasks`).
 - Use `--tasks-dir` on any CLI command to override.
 
 ## Development
+
+### Setup from Source
+```bash
+git clone https://github.com/geekbozu/CopilotTaskMaster.git
+cd CopilotTaskMaster
+pip install -e .
+```
+
+### Building Docker Locally
+```bash
+docker build -t taskmaster .
+```
+
+### Testing & Linting
 ```bash
 pytest                 # Run tests
 black taskmaster/      # Format code
