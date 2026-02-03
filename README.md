@@ -10,6 +10,22 @@ CopilotTaskMaster is a system for managing tasks as markdown files in a hierarch
 - **Token-efficient** responses optimized for AI assistants
 - **Docker support** for easy deployment
 - **Hierarchical organization** with projects, tasks, and groupings
+- **Project-based organization** - all tasks must be organized under a project folder
+
+## Important: Project Requirement
+
+**All tasks must be organized under a project folder.** Task paths must include at least one directory level (the project folder) before the task file name.
+
+✅ **Valid paths:**
+- `project1/task1.md`
+- `project1/features/auth.md`
+- `my-app/bugs/issue-123.md`
+
+❌ **Invalid paths:**
+- `task1.md` (no project folder)
+- `auth.md` (no project folder)
+
+This requirement ensures proper organization and prevents tasks from being scattered at the root level. You can still edit markdown files directly using standard text editors or file tools, but when using TaskMaster's create, read, update, delete, or move operations, a project folder is mandatory.
 
 ## Features
 

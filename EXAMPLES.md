@@ -2,6 +2,21 @@
 
 This directory contains example configurations and scripts for using CopilotTaskMaster.
 
+## Important: Project Requirement
+
+**All task paths must include a project folder.** This is a fundamental requirement for all TaskMaster operations:
+
+✅ **Valid examples:**
+- `projectA/feature-1.md`
+- `my-app/bugs/issue-42.md`
+- `sprint-5/backlog/task.md`
+
+❌ **Invalid examples:**
+- `feature-1.md` (missing project folder)
+- `task.md` (missing project folder)
+
+While you can edit markdown files directly with any text editor without this restriction, all TaskMaster CLI and MCP operations (create, read, update, delete, move) require a project folder for proper organization.
+
 ## MCP Server Configuration
 
 To use CopilotTaskMaster with Claude Desktop or other MCP clients, add this configuration:

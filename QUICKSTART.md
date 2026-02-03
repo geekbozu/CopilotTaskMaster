@@ -1,5 +1,14 @@
 # Quick Start Guide
 
+## Important: Project Requirement
+
+**All tasks must be organized under a project folder.** When creating or managing tasks with TaskMaster, you must include a project folder in the path:
+
+✅ **Valid:** `project/task.md`, `my-app/feature.md`, `project1/subfolder/task.md`  
+❌ **Invalid:** `task.md`, `feature.md` (no project folder)
+
+This ensures proper organization. You can edit markdown files directly with any editor, but TaskMaster operations require a project folder.
+
 ## Installation
 
 ### Local Installation
