@@ -30,6 +30,11 @@ def get_managers():
     return _task_manager, _task_searcher
 
 
+# Module-level aliases for tests and external usage
+# Tests expect `task_manager` and `task_searcher` to be importable
+task_manager, task_searcher = get_managers()
+
+
 @app.list_tools()
 async def list_tools() -> List[Tool]:
     """List available tools for the LLM"""
