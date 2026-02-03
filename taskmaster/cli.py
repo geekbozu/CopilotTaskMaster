@@ -46,10 +46,14 @@ def create(ctx, path, title, content, status, priority, tags):
     if tags:
         metadata['tags'] = list(tags)
     
-    result = manager.create_task(path, title, content, metadata)
-    click.echo(f"✓ Created task: {result['path']}")
-    click.echo(f"  Title: {result['title']}")
-    click.echo(f"  Created: {result['created']}")
+    try:
+        result = manager.create_task(path, title, content, metadata)
+        click.echo(f"✓ Created task: {result['path']}")
+        click.echo(f"  Title: {result['title']}")
+        click.echo(f"  Created: {result['created']}")
+    except ValueError as e:
+        click.echo(f"✗ Error: {str(e)}", err=True)
+        sys.exit(1)
 
 
 @main.command()
@@ -60,16 +64,20 @@ def show(ctx, path, full):
     """Show a task card"""
     manager = ctx.obj['manager']
     
-    task = manager.read_task(path)
-    if not task:
-        click.echo(f"✗ Task not found: {path}", err=True)
+    try:
+        task = manager.read_task(path)
+        if not task:
+            click.echo(f"✗ Task not found: {path}", err=True)
+            sys.exit(1)
+        
+        click.echo(f"Path: {task['path']}")
+        click.echo(f"Title: {task['title']}")
+        click.echo(f"\nMetadata:")
+        for key, value in task['metadata'].items():
+            click.echo(f"  {key}: {value}")
+    except ValueError as e:
+        click.echo(f"✗ Error: {str(e)}", err=True)
         sys.exit(1)
-    
-    click.echo(f"Path: {task['path']}")
-    click.echo(f"Title: {task['title']}")
-    click.echo(f"\nMetadata:")
-    for key, value in task['metadata'].items():
-        click.echo(f"  {key}: {value}")
     
     if full:
         click.echo(f"\nContent:\n{task['content']}")
@@ -87,27 +95,31 @@ def update(ctx, path, title, content, status, priority, add_tag):
     """Update a task card"""
     manager = ctx.obj['manager']
     
-    metadata = {}
-    if status:
-        metadata['status'] = status
-    if priority:
-        metadata['priority'] = priority
-    
-    if add_tag:
-        # Read existing tags first
-        task = manager.read_task(path)
-        if task:
-            existing_tags = task['metadata'].get('tags', [])
-            if isinstance(existing_tags, str):
-                existing_tags = [existing_tags]
-            metadata['tags'] = list(set(existing_tags + list(add_tag)))
-    
-    result = manager.update_task(path, title, content, metadata)
-    if not result:
-        click.echo(f"✗ Task not found: {path}", err=True)
+    try:
+        metadata = {}
+        if status:
+            metadata['status'] = status
+        if priority:
+            metadata['priority'] = priority
+        
+        if add_tag:
+            # Read existing tags first
+            task = manager.read_task(path)
+            if task:
+                existing_tags = task['metadata'].get('tags', [])
+                if isinstance(existing_tags, str):
+                    existing_tags = [existing_tags]
+                metadata['tags'] = list(set(existing_tags + list(add_tag)))
+        
+        result = manager.update_task(path, title, content, metadata)
+        if not result:
+            click.echo(f"✗ Task not found: {path}", err=True)
+            sys.exit(1)
+        
+        click.echo(f"✓ Updated task: {result['path']}")
+    except ValueError as e:
+        click.echo(f"✗ Error: {str(e)}", err=True)
         sys.exit(1)
-    
-    click.echo(f"✓ Updated task: {result['path']}")
 
 
 @main.command()
@@ -117,10 +129,14 @@ def delete(ctx, path):
     """Delete a task card"""
     manager = ctx.obj['manager']
     
-    if manager.delete_task(path):
-        click.echo(f"✓ Deleted task: {path}")
-    else:
-        click.echo(f"✗ Task not found: {path}", err=True)
+    try:
+        if manager.delete_task(path):
+            click.echo(f"✓ Deleted task: {path}")
+        else:
+            click.echo(f"✗ Task not found: {path}", err=True)
+            sys.exit(1)
+    except ValueError as e:
+        click.echo(f"✗ Error: {str(e)}", err=True)
         sys.exit(1)
 
 
@@ -251,10 +267,14 @@ def move(ctx, old_path, new_path):
     """Move/rename a task"""
     manager = ctx.obj['manager']
     
-    if manager.move_task(old_path, new_path):
-        click.echo(f"✓ Moved task from {old_path} to {new_path}")
-    else:
-        click.echo(f"✗ Failed to move task", err=True)
+    try:
+        if manager.move_task(old_path, new_path):
+            click.echo(f"✓ Moved task from {old_path} to {new_path}")
+        else:
+            click.echo(f"✗ Failed to move task", err=True)
+            sys.exit(1)
+    except ValueError as e:
+        click.echo(f"✗ Error: {str(e)}", err=True)
         sys.exit(1)
 
 
