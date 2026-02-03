@@ -33,8 +33,9 @@ def main(ctx, tasks_dir):
 @click.option('--status', default='open', help='Task status')
 @click.option('--priority', default='medium', help='Task priority')
 @click.option('--tags', multiple=True, help='Task tags')
+@click.option('--project', default=None, help='Project name to scope operation')
 @click.pass_context
-def create(ctx, path, title, content, status, priority, tags):
+def create(ctx, path, title, content, status, priority, tags, project):
     """Create a new task card"""
     manager = ctx.obj['manager']
     
@@ -45,8 +46,15 @@ def create(ctx, path, title, content, status, priority, tags):
     
     if tags:
         metadata['tags'] = list(tags)
-    
-    result = manager.create_task(path, title, content, metadata)
+
+    from .utils import project_resolution_error_msg
+
+    try:
+        result = manager.create_task(path, title, content, metadata, project=project)
+    except ValueError as e:
+        click.echo(project_resolution_error_msg(e), err=True)
+        sys.exit(2)
+
     click.echo(f"✓ Created task: {result['path']}")
     click.echo(f"  Title: {result['title']}")
     click.echo(f"  Created: {result['created']}")
@@ -55,12 +63,20 @@ def create(ctx, path, title, content, status, priority, tags):
 @main.command()
 @click.argument('path')
 @click.option('--full', is_flag=True, help='Show full content')
+@click.option('--project', default=None, help='Project name to scope operation')
 @click.pass_context
-def show(ctx, path, full):
+def show(ctx, path, full, project):
     """Show a task card"""
     manager = ctx.obj['manager']
     
-    task = manager.read_task(path)
+    from .utils import project_resolution_error_msg
+
+    try:
+        task = manager.read_task(path, project=project)
+    except ValueError as e:
+        click.echo(project_resolution_error_msg(e), err=True)
+        sys.exit(2)
+
     if not task:
         click.echo(f"✗ Task not found: {path}", err=True)
         sys.exit(1)
@@ -82,8 +98,9 @@ def show(ctx, path, full):
 @click.option('--status', default=None, help='New status')
 @click.option('--priority', default=None, help='New priority')
 @click.option('--add-tag', multiple=True, help='Add tags')
+@click.option('--project', default=None, help='Project name to scope operation')
 @click.pass_context
-def update(ctx, path, title, content, status, priority, add_tag):
+def update(ctx, path, title, content, status, priority, add_tag, project):
     """Update a task card"""
     manager = ctx.obj['manager']
     
@@ -93,16 +110,23 @@ def update(ctx, path, title, content, status, priority, add_tag):
     if priority:
         metadata['priority'] = priority
     
-    if add_tag:
-        # Read existing tags first
-        task = manager.read_task(path)
-        if task:
-            existing_tags = task['metadata'].get('tags', [])
-            if isinstance(existing_tags, str):
-                existing_tags = [existing_tags]
-            metadata['tags'] = list(set(existing_tags + list(add_tag)))
-    
-    result = manager.update_task(path, title, content, metadata)
+    from .utils import project_resolution_error_msg
+
+    try:
+        if add_tag:
+            # Read existing tags first
+            task = manager.read_task(path, project=project)
+            if task:
+                existing_tags = task['metadata'].get('tags', [])
+                if isinstance(existing_tags, str):
+                    existing_tags = [existing_tags]
+                metadata['tags'] = list(set(existing_tags + list(add_tag)))
+
+        result = manager.update_task(path, title, content, metadata, project=project)
+    except ValueError as e:
+        click.echo(project_resolution_error_msg(e), err=True)
+        sys.exit(2)
+
     if not result:
         click.echo(f"✗ Task not found: {path}", err=True)
         sys.exit(1)
@@ -112,12 +136,21 @@ def update(ctx, path, title, content, status, priority, add_tag):
 
 @main.command()
 @click.argument('path')
+@click.option('--project', default=None, help='Project name to scope operation')
 @click.pass_context
-def delete(ctx, path):
+def delete(ctx, path, project):
     """Delete a task card"""
     manager = ctx.obj['manager']
     
-    if manager.delete_task(path):
+    from .utils import project_resolution_error_msg
+
+    try:
+        success = manager.delete_task(path, project=project)
+    except ValueError as e:
+        click.echo(project_resolution_error_msg(e), err=True)
+        sys.exit(2)
+
+    if success:
         click.echo(f"✓ Deleted task: {path}")
     else:
         click.echo(f"✗ Task not found: {path}", err=True)
@@ -128,12 +161,19 @@ def delete(ctx, path):
 @click.option('--subpath', default="", help='Subdirectory to list')
 @click.option('--recursive/--no-recursive', default=True, help='Include subdirectories')
 @click.option('--full', is_flag=True, help='Show full content')
+@click.option('--project', default=None, help='Project name to scope operation')
 @click.pass_context
-def list(ctx, subpath, recursive, full):
+def list(ctx, subpath, recursive, full, project):
     """List all tasks"""
     manager = ctx.obj['manager']
     
-    tasks = manager.list_tasks(subpath, recursive, full)
+    from .utils import project_resolution_error_msg
+
+    try:
+        tasks = manager.list_tasks(subpath=subpath, recursive=recursive, include_content=full, project=project)
+    except ValueError as e:
+        click.echo(project_resolution_error_msg(e), err=True)
+        sys.exit(2)
     
     if not tasks:
         click.echo("No tasks found.")
@@ -155,12 +195,19 @@ def list(ctx, subpath, recursive, full):
 
 @main.command()
 @click.option('--subpath', default="", help='Subdirectory to show structure for')
+@click.option('--project', default=None, help='Project name to scope operation')
 @click.pass_context
-def tree(ctx, subpath):
+def tree(ctx, subpath, project):
     """Show hierarchical structure of tasks"""
     manager = ctx.obj['manager']
     
-    structure = manager.get_structure(subpath)
+    from .utils import project_resolution_error_msg
+
+    try:
+        structure = manager.get_structure(subpath, project=project)
+    except ValueError as e:
+        click.echo(project_resolution_error_msg(e), err=True)
+        sys.exit(2)
     
     def print_tree(node, prefix="", is_last=True):
         connector = "└── " if is_last else "├── "
@@ -246,12 +293,21 @@ def tags(ctx):
 @main.command()
 @click.argument('old_path')
 @click.argument('new_path')
+@click.option('--project', default=None, help='Project name to scope operation')
 @click.pass_context
-def move(ctx, old_path, new_path):
+def move(ctx, old_path, new_path, project):
     """Move/rename a task"""
     manager = ctx.obj['manager']
     
-    if manager.move_task(old_path, new_path):
+    from .utils import project_resolution_error_msg
+
+    try:
+        success = manager.move_task(old_path, new_path, project=project)
+    except ValueError as e:
+        click.echo(project_resolution_error_msg(e), err=True)
+        sys.exit(2)
+
+    if success:
         click.echo(f"✓ Moved task from {old_path} to {new_path}")
     else:
         click.echo(f"✗ Failed to move task", err=True)

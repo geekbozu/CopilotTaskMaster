@@ -36,6 +36,10 @@ async def list_tools() -> List[Tool]:
                         "type": "string",
                         "description": "Relative path for the task (e.g., 'project1/task1.md')"
                     },
+                    "project": {
+                        "type": "string",
+                        "description": "Project name to scope the task (optional)"
+                    },
                     "title": {
                         "type": "string",
                         "description": "Task title"
@@ -72,6 +76,10 @@ async def list_tools() -> List[Tool]:
                     "path": {
                         "type": "string",
                         "description": "Relative path to the task"
+                    },
+                    "project": {
+                        "type": "string",
+                        "description": "Project name to scope the task (optional)"
                     }
                 },
                 "required": ["path"]
@@ -86,6 +94,10 @@ async def list_tools() -> List[Tool]:
                     "path": {
                         "type": "string",
                         "description": "Relative path to the task"
+                    },
+                    "project": {
+                        "type": "string",
+                        "description": "Project name to scope the task (optional)"
                     },
                     "title": {
                         "type": "string",
@@ -112,6 +124,10 @@ async def list_tools() -> List[Tool]:
                     "path": {
                         "type": "string",
                         "description": "Relative path to the task"
+                    },
+                    "project": {
+                        "type": "string",
+                        "description": "Project name to scope the task (optional)"
                     }
                 },
                 "required": ["path"]
@@ -132,6 +148,10 @@ async def list_tools() -> List[Tool]:
                         "type": "boolean",
                         "description": "Include subdirectories",
                         "default": True
+                    },
+                    "project": {
+                        "type": "string",
+                        "description": "Project name to scope the listing (optional)"
                     }
                 },
                 "required": []
@@ -183,6 +203,10 @@ async def list_tools() -> List[Tool]:
                         "type": "string",
                         "description": "Subdirectory to show structure for",
                         "default": ""
+                    },
+                    "project": {
+                        "type": "string",
+                        "description": "Project name to scope the structure (optional)"
                     }
                 },
                 "required": []
@@ -201,6 +225,10 @@ async def list_tools() -> List[Tool]:
                     "new_path": {
                         "type": "string",
                         "description": "New path"
+                    },
+                    "project": {
+                        "type": "string",
+                        "description": "Project name to scope the move (optional)"
                     }
                 },
                 "required": ["old_path", "new_path"]
@@ -224,6 +252,8 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
     
     try:
         if name == "create_task":
+            from .utils import project_resolution_error_msg
+
             metadata = {}
             if 'status' in arguments:
                 metadata['status'] = arguments['status']
@@ -231,27 +261,37 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
                 metadata['priority'] = arguments['priority']
             if 'tags' in arguments:
                 metadata['tags'] = arguments['tags']
-            
-            result = task_manager.create_task(
-                path=arguments['path'],
-                title=arguments['title'],
-                content=arguments.get('content', ''),
-                metadata=metadata if metadata else None
-            )
-            
+
+            try:
+                result = task_manager.create_task(
+                    path=arguments['path'],
+                    title=arguments['title'],
+                    content=arguments.get('content', ''),
+                    metadata=metadata if metadata else None,
+                    project=arguments.get('project')
+                )
+            except ValueError as e:
+                return [TextContent(type="text", text=project_resolution_error_msg(e))]
+
             return [TextContent(
                 type="text",
                 text=f"✓ Created task '{result['title']}' at {result['path']}"
             )]
         
         elif name == "read_task":
-            task = task_manager.read_task(arguments['path'])
+            from .utils import project_resolution_error_msg
+
+            try:
+                task = task_manager.read_task(arguments['path'], project=arguments.get('project'))
+            except ValueError as e:
+                return [TextContent(type="text", text=project_resolution_error_msg(e))]
+
             if not task:
                 return [TextContent(
                     type="text",
                     text=f"✗ Task not found: {arguments['path']}"
                 )]
-            
+
             # Format task info in a token-efficient way
             output = f"**{task['title']}**\n\n"
             output += f"Path: {task['path']}\n\n"
@@ -266,13 +306,19 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             return [TextContent(type="text", text=output)]
         
         elif name == "update_task":
-            result = task_manager.update_task(
-                path=arguments['path'],
-                title=arguments.get('title'),
-                content=arguments.get('content'),
-                metadata=arguments.get('metadata')
-            )
-            
+            from .utils import project_resolution_error_msg
+
+            try:
+                result = task_manager.update_task(
+                    path=arguments['path'],
+                    title=arguments.get('title'),
+                    content=arguments.get('content'),
+                    metadata=arguments.get('metadata'),
+                    project=arguments.get('project')
+                )
+            except ValueError as e:
+                return [TextContent(type="text", text=project_resolution_error_msg(e))]
+
             if not result:
                 return [TextContent(
                     type="text",
@@ -285,8 +331,13 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             )]
         
         elif name == "delete_task":
-            success = task_manager.delete_task(arguments['path'])
-            
+            from .utils import project_resolution_error_msg
+
+            try:
+                success = task_manager.delete_task(arguments['path'], project=arguments.get('project'))
+            except ValueError as e:
+                return [TextContent(type="text", text=project_resolution_error_msg(e))]
+
             return [TextContent(
                 type="text",
                 text=f"✓ Deleted task: {arguments['path']}" if success 
@@ -294,12 +345,18 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             )]
         
         elif name == "list_tasks":
-            tasks = task_manager.list_tasks(
-                subpath=arguments.get('subpath', ''),
-                recursive=arguments.get('recursive', True),
-                include_content=False
-            )
-            
+            from .utils import project_resolution_error_msg
+
+            try:
+                tasks = task_manager.list_tasks(
+                    subpath=arguments.get('subpath', ''),
+                    recursive=arguments.get('recursive', True),
+                    include_content=False,
+                    project=arguments.get('project')
+                )
+            except ValueError as e:
+                return [TextContent(type="text", text=project_resolution_error_msg(e))]
+
             if not tasks:
                 return [TextContent(type="text", text="No tasks found.")]
             
@@ -344,8 +401,13 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             return [TextContent(type="text", text=output)]
         
         elif name == "get_structure":
-            structure = task_manager.get_structure(arguments.get('subpath', ''))
-            
+            from .utils import project_resolution_error_msg
+
+            try:
+                structure = task_manager.get_structure(arguments.get('subpath', ''), project=arguments.get('project'))
+            except ValueError as e:
+                return [TextContent(type="text", text=project_resolution_error_msg(e))]
+
             def format_tree(node, indent=0):
                 result = "  " * indent + f"📁 {node['name']}\n" if node['type'] == 'directory' else ""
                 
@@ -363,11 +425,17 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             return [TextContent(type="text", text=output or "Empty structure")]
         
         elif name == "move_task":
-            success = task_manager.move_task(
-                arguments['old_path'],
-                arguments['new_path']
-            )
-            
+            from .utils import project_resolution_error_msg
+
+            try:
+                success = task_manager.move_task(
+                    arguments['old_path'],
+                    arguments['new_path'],
+                    project=arguments.get('project')
+                )
+            except ValueError as e:
+                return [TextContent(type="text", text=project_resolution_error_msg(e))]
+
             return [TextContent(
                 type="text",
                 text=f"✓ Moved task" if success else "✗ Failed to move task"

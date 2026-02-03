@@ -80,7 +80,7 @@ class TaskSearcher:
                     score = 1
                 
                 result = {
-                    'path': str(md_file.relative_to(self.base_path)),
+                    'path': md_file.relative_to(self.base_path).as_posix(),
                     'title': title,
                     'score': score,
                     'metadata': post.metadata
@@ -94,7 +94,11 @@ class TaskSearcher:
                         result['snippet'] = self._extract_snippet(content, query_lower)
                 
                 results.append(result)
-                
+
+                # Early exit for performance: stop scanning once we have enough results
+                if len(results) >= max_results:
+                    break
+
             except Exception as e:
                 continue
         
@@ -121,42 +125,27 @@ class TaskSearcher:
             List of matching tasks
         """
         tags_lower = [tag.lower() for tag in tags]
-        metadata_filter = {'tags': tags_lower} if tags else None
-        
         results = []
-        
+        if not tags_lower:
+            return results
+
         for md_file in self.base_path.glob("**/*.md"):
             try:
                 with open(md_file, 'r', encoding='utf-8') as f:
                     post = frontmatter.load(f)
-                
-                task_tags = post.metadata.get('tags', [])
-                if isinstance(task_tags, str):
-                    task_tags = [task_tags]
-                
-                task_tags_lower = [tag.lower() for tag in task_tags]
-                
-                if match_all:
-                    if all(tag in task_tags_lower for tag in tags_lower):
-                        results.append({
-                            'path': str(md_file.relative_to(self.base_path)),
-                            'title': post.get('title', ''),
-                            'metadata': post.metadata
-                        })
-                else:
-                    if any(tag in task_tags_lower for tag in tags_lower):
-                        results.append({
-                            'path': str(md_file.relative_to(self.base_path)),
-                            'title': post.get('title', ''),
-                            'metadata': post.metadata
-                        })
-                
+
+                if self._matches_metadata(post.metadata, {'tags': tags_lower}, match_all=match_all):
+                    results.append({
+                        'path': md_file.relative_to(self.base_path).as_posix(),
+                        'title': post.get('title', ''),
+                        'metadata': post.metadata
+                    })
+
                 if len(results) >= max_results:
                     break
-                    
             except Exception:
                 continue
-        
+
         return results
     
     def get_all_tags(self) -> Set[str]:
@@ -176,33 +165,47 @@ class TaskSearcher:
                 task_tags = post.metadata.get('tags', [])
                 if isinstance(task_tags, str):
                     task_tags = [task_tags]
-                
-                tags.update(task_tags)
+                # Normalize tags to lowercase strings
+                tags.update(str(t).lower() for t in task_tags)
             except Exception:
                 continue
         
         return tags
     
-    def _matches_metadata(self, metadata: Dict[str, Any], filters: Dict[str, Any]) -> bool:
-        """Check if metadata matches all filters"""
+    def _matches_metadata(self, metadata: Dict[str, Any], filters: Dict[str, Any], match_all: bool = False) -> bool:
+        """Check if metadata matches all filters (case-insensitive, flexible list/scalar handling)
+
+        For list-valued filters:
+            - if match_all is False (default): return True if any filter value is present in metadata
+            - if match_all is True: return True only if all filter values are present in metadata
+        """
         for key, value in filters.items():
             if key not in metadata:
                 return False
-            
+
             meta_value = metadata[key]
-            
-            # Handle list values (like tags)
-            if isinstance(value, list):
-                if isinstance(meta_value, str):
-                    meta_value = [meta_value]
-                if not isinstance(meta_value, list):
-                    return False
-                if not any(v in meta_value for v in value):
-                    return False
+
+            # Normalize metadata values to list of lowercase strings
+            if isinstance(meta_value, str):
+                meta_list = [meta_value.lower()]
+            elif isinstance(meta_value, list):
+                meta_list = [str(v).lower() for v in meta_value]
             else:
-                if meta_value != value:
+                meta_list = [str(meta_value).lower()]
+
+            # Normalize filter values to list of lowercase strings
+            if isinstance(value, list):
+                filter_list = [str(v).lower() for v in value]
+                if match_all:
+                    if not all(f in meta_list for f in filter_list):
+                        return False
+                else:
+                    if not any(f in meta_list for f in filter_list):
+                        return False
+            else:
+                if str(value).lower() not in meta_list:
                     return False
-        
+
         return True
     
     def _extract_snippet(self, content: str, query: str, context_chars: int = 100) -> str:

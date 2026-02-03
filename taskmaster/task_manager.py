@@ -24,19 +24,60 @@ class TaskManager:
             base_path = os.environ.get('TASKMASTER_TASKS_DIR', './tasks')
         self.base_path = Path(base_path).resolve()
         self.base_path.mkdir(parents=True, exist_ok=True)
+
+    def _resolve_path(self, project: Optional[str], path: str):
+        """Resolve a (project, path) pair into a filesystem Path and a POSIX relative path.
+
+        Rules:
+        - If `path` includes a top-level folder (e.g., 'project/file.md'), that folder will be
+          treated as the project when `project` is not specified.
+        - If `project` is provided and `path` also includes a different project prefix, a
+          ValueError is raised to avoid ambiguity.
+        - If neither a project argument nor a project prefix in the path is available, a
+          ValueError is raised — callers must explicitly provide a project.
+        - `path` must be relative and must not contain parent ('..') references.
+        """
+        p = Path(path)
+        if p.is_absolute():
+            raise ValueError("path must be relative")
+        if any(part == ".." for part in p.parts):
+            raise ValueError("path must not contain parent references")
+
+        # If project is not provided, the first path part is treated as project when present.
+        if project is None:
+            if len(p.parts) >= 2:
+                project = p.parts[0]
+                rest = Path(*p.parts[1:])
+            else:
+                # No project specified anywhere: error out — callers must be explicit
+                raise ValueError("project must be specified either as argument or as the top-level folder in path")
+        else:
+            # Project was provided explicitly — interpret the path relative to that project.
+            # If the path redundantly includes the same project prefix (e.g., 'proj/file'), strip it.
+            if len(p.parts) >= 2 and p.parts[0] == project:
+                rest = Path(*p.parts[1:])
+            else:
+                rest = p
+
+        full_path = self.base_path / project / rest
+        relative_posix = full_path.relative_to(self.base_path).as_posix()
+        return full_path, relative_posix
     
     def create_task(
-        self, 
-        path: str, 
-        title: str, 
-        content: str = "", 
-        metadata: Optional[Dict[str, Any]] = None
+        self,
+        path: str,
+        title: str,
+        content: str = "",
+        metadata: Optional[Dict[str, Any]] = None,
+        project: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Create a new task card
         
         Args:
-            path: Relative path within base_path (e.g., 'project1/task1.md')
+            path: Relative path within project (e.g., 'task1.md') or with project prefix ('project1/task1.md')
+            project: Optional project name. If omitted, project will be inferred from the path or
+                     `default_project` will be used if configured.
             title: Task title
             content: Task content (markdown)
             metadata: Additional metadata (status, priority, tags, etc.)
@@ -44,8 +85,8 @@ class TaskManager:
         Returns:
             Dict with task information
         """
-        full_path = self.base_path / path
-        
+        full_path, rel_path = self._resolve_path(project, path)
+
         # Ensure parent directories exist
         full_path.parent.mkdir(parents=True, exist_ok=True)
         
@@ -63,23 +104,24 @@ class TaskManager:
             f.write(frontmatter.dumps(post))
         
         return {
-            'path': str(full_path.relative_to(self.base_path)),
+            'path': rel_path,
             'title': title,
             'created': post['created'],
             'metadata': post.metadata
         }
     
-    def read_task(self, path: str) -> Optional[Dict[str, Any]]:
+    def read_task(self, path: str, project: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
         Read a task card
         
         Args:
-            path: Relative path within base_path
+            path: Relative path within project or with project prefix
+            project: Optional project name to scope the read
         
         Returns:
             Dict with task information or None if not found
         """
-        full_path = self.base_path / path
+        full_path, rel_path = self._resolve_path(project, path)
         
         if not full_path.exists():
             return None
@@ -88,24 +130,26 @@ class TaskManager:
             post = frontmatter.load(f)
         
         return {
-            'path': str(full_path.relative_to(self.base_path)),
+            'path': rel_path,
             'title': post.get('title', ''),
             'content': post.content,
             'metadata': post.metadata
         }
     
     def update_task(
-        self, 
-        path: str, 
+        self,
+        path: str,
         title: Optional[str] = None,
-        content: Optional[str] = None, 
-        metadata: Optional[Dict[str, Any]] = None
+        content: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        project: Optional[str] = None
     ) -> Optional[Dict[str, Any]]:
         """
         Update an existing task card
         
         Args:
-            path: Relative path within base_path
+            path: Relative path within project or with project prefix
+            project: Optional project name to scope the update
             title: New title (optional)
             content: New content (optional)
             metadata: Metadata to update (merged with existing)
@@ -113,7 +157,7 @@ class TaskManager:
         Returns:
             Dict with updated task information or None if not found
         """
-        full_path = self.base_path / path
+        full_path, rel_path = self._resolve_path(project, path)
         
         if not full_path.exists():
             return None
@@ -136,23 +180,24 @@ class TaskManager:
             f.write(frontmatter.dumps(post))
         
         return {
-            'path': str(full_path.relative_to(self.base_path)),
+            'path': rel_path,
             'title': post.get('title', ''),
             'content': post.content,
             'metadata': post.metadata
         }
     
-    def delete_task(self, path: str) -> bool:
+    def delete_task(self, path: str, project: Optional[str] = None) -> bool:
         """
         Delete a task card
         
         Args:
-            path: Relative path within base_path
+            path: Relative path within project or with project prefix
+            project: Optional project name to scope the delete
         
         Returns:
             True if deleted, False if not found
         """
-        full_path = self.base_path / path
+        full_path, rel_path = self._resolve_path(project, path)
         
         if not full_path.exists():
             return False
@@ -171,49 +216,70 @@ class TaskManager:
         return True
     
     def list_tasks(
-        self, 
-        subpath: str = "", 
+        self,
+        subpath: str = "",
         recursive: bool = True,
-        include_content: bool = False
+        include_content: bool = False,
+        project: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
         List all tasks in a directory
         
         Args:
-            subpath: Subdirectory within base_path (empty for all)
+            subpath: Subdirectory within project or a project name when `project` is omitted
             recursive: Include subdirectories
             include_content: Include full content in results (token-expensive)
+            project: Optional project name to scope the listing
         
         Returns:
             List of task dictionaries
         """
-        search_path = self.base_path / subpath if subpath else self.base_path
-        
+        # Resolve search path based on project and subpath
+        if subpath:
+            sp = Path(subpath)
+            if project is None:
+                # If subpath looks like 'project/...' or a single project name, take it as the project
+                if len(sp.parts) >= 2:
+                    project = sp.parts[0]
+                    sub = Path(*sp.parts[1:])
+                else:
+                    project = sp.parts[0]
+                    sub = Path()
+            else:
+                sub = Path(subpath)
+        else:
+            sub = Path()
+
+        if project is None:
+            search_path = self.base_path
+        else:
+            search_path = self.base_path / project / sub
+
         if not search_path.exists():
             return []
-        
+
         pattern = "**/*.md" if recursive else "*.md"
         tasks = []
-        
+
         for md_file in search_path.glob(pattern):
             try:
                 with open(md_file, 'r', encoding='utf-8') as f:
                     post = frontmatter.load(f)
-                
+
                 task_info = {
-                    'path': str(md_file.relative_to(self.base_path)),
+                    'path': md_file.relative_to(self.base_path).as_posix(),
                     'title': post.get('title', ''),
                     'metadata': post.metadata
                 }
-                
+
                 if include_content:
                     task_info['content'] = post.content
-                
+
                 tasks.append(task_info)
             except Exception as e:
                 # Skip files that can't be parsed
                 continue
-        
+
         return tasks
     
     def get_structure(self, subpath: str = "") -> Dict[str, Any]:
@@ -247,7 +313,7 @@ class TaskManager:
                             tree['children'].append({
                                 'type': 'task',
                                 'name': item.name,
-                                'path': str(item.relative_to(self.base_path)),
+                                'path': item.relative_to(self.base_path).as_posix(),
                                 'title': post.get('title', ''),
                                 'metadata': {k: v for k, v in post.metadata.items() 
                                            if k in ['status', 'priority', 'tags']}
@@ -261,19 +327,20 @@ class TaskManager:
         
         return build_tree(search_path)
     
-    def move_task(self, old_path: str, new_path: str) -> bool:
+    def move_task(self, old_path: str, new_path: str, project: Optional[str] = None) -> bool:
         """
         Move/rename a task card
         
         Args:
-            old_path: Current relative path
-            new_path: New relative path
+            old_path: Current relative path within project or with project prefix
+            new_path: New relative path within project or with project prefix
+            project: Optional project name to scope the move (applies to both paths if provided)
         
         Returns:
             True if moved, False if source not found or destination exists
         """
-        old_full = self.base_path / old_path
-        new_full = self.base_path / new_path
+        old_full, old_rel = self._resolve_path(project, old_path)
+        new_full, new_rel = self._resolve_path(project, new_path)
         
         if not old_full.exists() or new_full.exists():
             return False

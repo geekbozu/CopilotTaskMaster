@@ -51,6 +51,10 @@ docker-compose up
 
 ### Command-Line Interface
 
+> **Note:** The CLI is LLM-first and intended for use by agents/LLMs (including those without MCP access) as well as direct human invocation. The CLI and the MCP server expose the **same behavior, validation rules, and error messages** — they differ only by transport/interface. In particular, task operations are **scoped to a project**: supply the project explicitly with `--project <name>` or include it as the top-level folder in the `path` (e.g., `project1/task.md`). If a project is missing you will receive a helpful error such as:
+>
+> `✗ project must be specified either as argument or as the top-level folder in path. Provide a project with --project <name> or prefix the path with 'project/'.`
+
 #### Create a Task
 
 ```bash
@@ -135,6 +139,8 @@ taskmaster tags
 ### MCP Server
 
 The MCP server provides LLM-friendly tools for task management.
+
+> **Note:** MCP tools mirror the CLI's inputs and behavior. All relevant MCP tools accept an optional `project` field (e.g., `project: "myproj"`) and return the same validation messages as the CLI when project scoping is missing or invalid. This keeps CLI and MCP behavior consistent for LLMs and agents.
 
 #### Running the MCP Server
 

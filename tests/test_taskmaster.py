@@ -149,6 +149,53 @@ def test_search_tasks(temp_tasks_dir):
     assert len(results) == 1
 
 
+def test_metadata_case_insensitive(temp_tasks_dir):
+    """Metadata filters should be case-insensitive"""
+    manager = TaskManager(temp_tasks_dir)
+    searcher = TaskSearcher(temp_tasks_dir)
+
+    manager.create_task(
+        "case/task1.md",
+        "Case Task",
+        metadata={"status": "Open"}
+    )
+
+    results = searcher.search(metadata_filters={"status": "open"})
+    assert len(results) == 1
+
+
+def test_metadata_list_scalar_flexibility(temp_tasks_dir):
+    """Filters should match list metadata and scalar metadata interchangeably"""
+    manager = TaskManager(temp_tasks_dir)
+    searcher = TaskSearcher(temp_tasks_dir)
+
+    manager.create_task(
+        "flex/task1.md",
+        "Flex Task",
+        metadata={"tags": "Auth"}
+    )
+
+    # filter given as list should match scalar metadata
+    results = searcher.search(metadata_filters={"tags": ["auth"]})
+    assert len(results) == 1
+
+    # filter given as scalar should also match
+    results2 = searcher.search(metadata_filters={"tags": "Auth"})
+    assert len(results2) == 1
+
+
+def test_search_early_exit(temp_tasks_dir):
+    """Search should stop when max_results is reached"""
+    manager = TaskManager(temp_tasks_dir)
+    searcher = TaskSearcher(temp_tasks_dir)
+
+    for i in range(20):
+        manager.create_task(f"bulk/task{i}.md", f"Task {i}")
+
+    results = searcher.search(max_results=5)
+    assert len(results) == 5
+
+
 def test_move_task(temp_tasks_dir):
     """Test moving a task"""
     manager = TaskManager(temp_tasks_dir)
@@ -189,16 +236,18 @@ def test_tags(temp_tasks_dir):
     manager = TaskManager(temp_tasks_dir)
     searcher = TaskSearcher(temp_tasks_dir)
     
-    # Create tasks with tags
+    # Create tasks with tags (explicit project required now)
     manager.create_task(
         "task1.md",
         "Task 1",
-        metadata={"tags": ["python", "backend"]}
+        metadata={"tags": ["python", "backend"]},
+        project="tagsproj"
     )
     manager.create_task(
         "task2.md",
         "Task 2",
-        metadata={"tags": ["javascript", "frontend"]}
+        metadata={"tags": ["javascript", "frontend"]},
+        project="tagsproj"
     )
     
     # Get all tags
@@ -207,3 +256,74 @@ def test_tags(temp_tasks_dir):
     assert "backend" in tags
     assert "javascript" in tags
     assert "frontend" in tags
+
+
+def test_requires_project_when_missing(temp_tasks_dir):
+    """Operations without a project and without a leading project in the path should fail"""
+    manager = TaskManager(temp_tasks_dir)
+
+    with pytest.raises(ValueError):
+        manager.create_task("task1.md", "No project")
+
+
+def test_project_param_project_prefix_ignored(temp_tasks_dir):
+    """When a project is provided explicitly, a path with a different leading folder is treated
+    as a subpath under the provided project (no error)."""
+    manager = TaskManager(temp_tasks_dir)
+
+    result = manager.create_task("other/task1.md", "Placed", project="proj")
+    assert result['path'] == "proj/other/task1.md"
+
+    task = manager.read_task("other/task1.md", project="proj")
+    assert task is not None
+    assert task['path'] == "proj/other/task1.md"
+
+
+
+
+def test_explicit_project_parameter(temp_tasks_dir):
+    """Passing project explicitly should place tasks under that project"""
+    manager = TaskManager(temp_tasks_dir)
+
+    result = manager.create_task("task1.md", "Explicit", project="explicit")
+    assert result['path'] == "explicit/task1.md"
+
+    task = manager.read_task("task1.md", project="explicit")
+    assert task is not None
+    assert task['path'] == "explicit/task1.md"
+
+
+def test_paths_are_posix(temp_tasks_dir):
+    """Ensure returned paths use POSIX-style separators (forward slashes)"""
+    manager = TaskManager(temp_tasks_dir)
+
+    # Create tasks in nested and flat paths
+    result = manager.create_task("dir/sub/task.md", "Task 1")
+    manager.create_task("other/task2.md", "Task 2")
+
+    # create_task should return POSIX-style path
+    assert '/' in result['path'] and '\\' not in result['path']
+
+    # read_task should return POSIX-style path
+    task = manager.read_task("dir/sub/task.md")
+    assert task is not None
+    assert '/' in task['path'] and '\\' not in task['path']
+
+    # list_tasks should return POSIX-style paths
+    tasks = manager.list_tasks()
+    assert any('/' in t['path'] and '\\' not in t['path'] for t in tasks)
+
+    # get_structure should include POSIX-style paths for task nodes
+    structure = manager.get_structure()
+
+    def collect_paths(tree):
+        ps = []
+        for c in tree.get('children', []):
+            if c.get('type') == 'task':
+                ps.append(c.get('path'))
+            elif c.get('type') == 'directory':
+                ps.extend(collect_paths(c))
+        return ps
+
+    for p in collect_paths(structure):
+        assert '/' in p and '\\' not in p
