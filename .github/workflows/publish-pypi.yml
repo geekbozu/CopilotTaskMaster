@@ -32,6 +32,10 @@ jobs:
     needs: test
     if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    environment:
+      name: pypi
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -45,6 +49,6 @@ jobs:
       - name: Build distributions
         run: python -m build
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@v1
-        with:
-          pypi_token: ${{ secrets.PYPI_API_TOKEN }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+        # Using Trusted Publishing (OIDC): no pypi_token or password input is provided
+
