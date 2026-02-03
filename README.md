@@ -61,7 +61,7 @@ Enable task management tools in VS Code by adding the server to your settings:
 
 ```json
 {
-  "servers  ": {
+  "servers": {
     "taskmaster": {
       "command": "docker",
       "args": [
