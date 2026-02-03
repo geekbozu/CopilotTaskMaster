@@ -1,281 +1,83 @@
 # CopilotTaskMaster
 
-Python tools and MCP server for managing markdown task cards with LLM integration.
-
-## Overview
-
-CopilotTaskMaster is a system for managing tasks as markdown files in a hierarchical folder structure. It provides:
-- **Command-line interface** for task management
-- **MCP (Model Context Protocol) server** for LLM interaction
-- **Token-efficient** responses optimized for AI assistants
-- **Docker support** for easy deployment
-- **Hierarchical organization** with projects, tasks, and groupings
+Markdown-based task management for humans and AI agents. Manage tasks via CLI or MCP (Model Context Protocol).
 
 ## Features
 
-- ✅ Create, read, update, and delete task cards
-- 🔍 Full-text search across tasks
-- 🏷️ Tag-based organization and filtering
-- 📁 Hierarchical folder structure
-- 🤖 MCP server for seamless LLM integration
-- 🐳 Docker containerization
-- 📊 Metadata support (status, priority, tags, dates)
+- **Project-Scoped:** All tasks are organized by project folders.
+- **Agent Optimized:** Token-efficient responses designed for LLM integration.
+- **Markdown First:** Tasks are stored as plain `.md` files with YAML frontmatter.
+- **Dual Interface:** Full parity between CLI and MCP server tools.
+- **Hierarchical:** Supports nested subpaths and tag-based filtering.
 
 ## Installation
 
 ### From Source
-
 ```bash
-# Clone the repository
 git clone https://github.com/geekbozu/CopilotTaskMaster.git
 cd CopilotTaskMaster
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Install the package
 pip install -e .
 ```
 
-### Using Docker
-
+### Via Docker
 ```bash
-# Build the image
-docker build -t copilot-taskmaster .
-
-# Run with docker-compose
-docker-compose up
+docker build -t taskmaster .
+# Run via Compose
+docker-compose run taskmaster list
 ```
 
 ## Usage
 
-### Command-Line Interface
-
-> **Note:** The CLI is LLM-first and intended for use by agents/LLMs (including those without MCP access) as well as direct human invocation. The CLI and the MCP server expose the **same behavior, validation rules, and error messages** — they differ only by transport/interface. In particular, task operations are **scoped to a project**: supply the project explicitly with `--project <name>` or include it as the top-level folder in the `path` (e.g., `project1/task.md`). If a project is missing you will receive a helpful error such as:
->
-> `✗ project must be specified either as argument or as the top-level folder in path. Provide a project with --project <name> or prefix the path with 'project/'.`
-
-#### Create a Task
+### CLI Basics
+All operations require a **project** scope, either via `--project` or as a path prefix.
 
 ```bash
-taskmaster create project1/task1.md "Implement login feature" \
-  --content "Build user authentication system" \
-  --status "in-progress" \
-  --priority "high" \
-  --tags "auth" --tags "backend"
-```
+# Create
+taskmaster create backend/login.md "Implement Auth" --status open --priority high
 
-#### List Tasks
+# List & Search
+taskmaster list --project backend
+taskmaster search --query "Auth" --status open
 
-```bash
-# List all tasks
-taskmaster list
-
-# List tasks in a specific directory
-taskmaster list --subpath project1
-
-# Show full content
-taskmaster list --full
-```
-
-#### Show Task Details
-
-```bash
-taskmaster show project1/task1.md --full
-```
-
-#### Search Tasks
-
-```bash
-# Text search
-taskmaster search --query "authentication"
-
-# Filter by status
-taskmaster search --status "in-progress"
-
-# Filter by tags
-taskmaster search --tags "backend" --tags "auth"
-
-# Combined filters
-taskmaster search --query "login" --priority "high" --max-results 10
-```
-
-#### Update Task
-
-```bash
-taskmaster update project1/task1.md \
-  --status "done" \
-  --add-tag "reviewed"
-```
-
-#### Show Hierarchy
-
-```bash
-# Show entire structure
-taskmaster tree
-
-# Show structure of subdirectory
-taskmaster tree --subpath project1
-```
-
-#### Move/Rename Task
-
-```bash
-taskmaster move project1/task1.md project1/completed/task1.md
-```
-
-#### Delete Task
-
-```bash
-taskmaster delete project1/task1.md
-```
-
-#### List All Tags
-
-```bash
-taskmaster tags
+# Update & Move
+taskmaster update backend/login.md --status in-progress
+taskmaster move backend/login.md backend/completed/login.md
 ```
 
 ### MCP Server
-
-The MCP server provides LLM-friendly tools for task management.
-
-> **Note:** MCP tools mirror the CLI's inputs and behavior. All relevant MCP tools accept an optional `project` field (e.g., `project: "myproj"`) and return the same validation messages as the CLI when project scoping is missing or invalid. This keeps CLI and MCP behavior consistent for LLMs and agents.
-
-#### Running the MCP Server
+Integrate TaskMaster with LLMs (like Cursor or VS Code Copilot) using the MCP server.
 
 ```bash
-# Set tasks directory (optional)
-export TASKMASTER_TASKS_DIR=/path/to/tasks
-
-# Run the server
+# Run server
 python -m taskmaster.mcp_server
 ```
 
-#### Available MCP Tools
+**Available Tools:** `create_task`, `read_task`, `update_task`, `delete_task`, `list_tasks`, `search_tasks`, `move_task`, `get_structure`, `get_all_tags`.
 
-1. **create_task** - Create a new task card
-2. **read_task** - Read a task by path
-3. **update_task** - Update existing task
-4. **delete_task** - Delete a task
-5. **list_tasks** - List tasks (token-efficient summary)
-6. **search_tasks** - Search with filters (token-efficient)
-7. **get_structure** - Get hierarchical overview
-8. **move_task** - Move/rename tasks
-9. **get_all_tags** - List all tags
-
-All MCP responses are optimized for token efficiency while maintaining usefulness.
-
-### Docker Usage
-
-#### Interactive Mode
-
-```bash
-docker run -it -v $(pwd)/tasks:/tasks copilot-taskmaster list
-```
-
-#### Run Specific Commands
-
-```bash
-# Create a task
-docker run -v $(pwd)/tasks:/tasks copilot-taskmaster \
-  create project1/task1.md "My Task"
-
-# Search tasks
-docker run -v $(pwd)/tasks:/tasks copilot-taskmaster \
-  search --query "login"
-```
-
-#### Using Docker Compose
-
-```bash
-# Start the container
-docker-compose run taskmaster list
-
-# Create tasks
-docker-compose run taskmaster create project1/task1.md "Task Title"
-```
-
-## Task Structure
-
-Tasks are markdown files with YAML frontmatter:
+## Task Format
+Tasks are standard Markdown files:
 
 ```markdown
 ---
-title: Implement User Authentication
-created: 2024-02-02T10:00:00
-updated: 2024-02-02T15:30:00
-status: in-progress
+title: Implement Auth
+status: open
 priority: high
-tags:
-  - auth
-  - backend
-  - security
+tags: [auth, security]
 ---
-
 # Implementation Details
-
-Build a secure authentication system with:
-- JWT tokens
-- Password hashing
-- Session management
-
-## Tasks
-- [x] Set up auth routes
-- [ ] Implement password hashing
-- [ ] Add JWT middleware
+- [ ] Setup JWT
+- [ ] Hash Passwords
 ```
 
 ## Configuration
-
-### Environment Variables
-
-- `TASKMASTER_TASKS_DIR` - Path to tasks directory (default: `./tasks`)
-
-### Command-Line Options
-
-Most commands accept `--tasks-dir` to override the tasks directory:
-
-```bash
-taskmaster --tasks-dir /path/to/tasks list
-```
-
-## Project Structure
-
-```
-CopilotTaskMaster/
-├── taskmaster/
-│   ├── __init__.py
-│   ├── task_manager.py    # Core task management
-│   ├── search.py          # Search functionality
-│   ├── cli.py             # CLI interface
-│   └── mcp_server.py      # MCP server
-├── tasks/                 # Default tasks directory
-├── pyproject.toml         # Package configuration
-├── requirements.txt       # Dependencies
-├── Dockerfile            # Docker image
-└── docker-compose.yml    # Docker Compose config
-```
+- `TASKMASTER_TASKS_DIR`: Path to storage (default: `./tasks`).
+- Use `--tasks-dir` on any CLI command to override.
 
 ## Development
-
-### Running Tests
-
 ```bash
-pytest
-```
-
-### Code Formatting
-
-```bash
-black taskmaster/
-ruff check taskmaster/
+pytest                 # Run tests
+black taskmaster/      # Format code
 ```
 
 ## License
-
 MIT
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
