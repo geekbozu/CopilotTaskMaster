@@ -46,7 +46,7 @@ def create(ctx, path, title, content, status, priority, tags, project):
     """
     if path is None or title is None:
         click.echo(ctx.get_help())
-        sys.exit(0)
+        sys.exit(2)
 
     manager = ctx.obj["manager"]
 
@@ -81,7 +81,7 @@ def show(ctx, path, full, project):
     """
     if path is None:
         click.echo(ctx.get_help())
-        sys.exit(0)
+        sys.exit(2)
 
     manager = ctx.obj["manager"]
 
@@ -124,7 +124,7 @@ def update(ctx, path, title, content, status, priority, add_tag, project):
     """
     if path is None:
         click.echo(ctx.get_help())
-        sys.exit(0)
+        sys.exit(2)
 
     manager = ctx.obj["manager"]
 
@@ -169,7 +169,7 @@ def delete(ctx, path, project):
     """
     if path is None:
         click.echo(ctx.get_help())
-        sys.exit(0)
+        sys.exit(2)
 
     manager = ctx.obj["manager"]
 
@@ -353,7 +353,7 @@ def move(ctx, old_path, new_path, project):
     """
     if old_path is None or new_path is None:
         click.echo(ctx.get_help())
-        sys.exit(0)
+        sys.exit(2)
 
     manager = ctx.obj["manager"]
 
