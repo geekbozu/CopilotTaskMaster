@@ -6,6 +6,7 @@ import pytest
 
 from taskmaster.cli import main
 from taskmaster.task_manager import TaskManager
+from taskmaster import __version__
 
 
 @pytest.fixture
@@ -58,3 +59,10 @@ def test_move_with_project_flag(temp_tasks_dir):
     assert 'Moved task' in res.output
 
     assert manager.read_task('other/task1.md', project='mv') is not None
+
+
+def test_cli_version():
+    runner = CliRunner()
+    res = runner.invoke(main, ['--version'])
+    assert res.exit_code == 0
+    assert __version__ in res.output

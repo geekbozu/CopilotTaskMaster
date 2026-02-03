@@ -8,6 +8,7 @@ from mcp.types import TextContent
 from taskmaster.mcp_server import call_tool, task_manager, task_searcher
 from taskmaster.task_manager import TaskManager
 from taskmaster.search import TaskSearcher
+from taskmaster import __version__
 
 
 def test_mcp_create_requires_project_when_missing(tmp_path):
@@ -59,3 +60,6 @@ def test_mcp_move_with_project(tmp_path):
     res = asyncio.run(call_tool("move_task", {"old_path": "task1.md", "new_path": "other/task1.md", "project": "mv"}))
     assert 'Moved task' in res[0].text
     assert manager.read_task('other/task1.md', project='mv') is not None
+
+
+

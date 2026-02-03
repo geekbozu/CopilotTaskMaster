@@ -14,6 +14,8 @@ jobs:
         python-version: ["3.10", "3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -38,6 +40,21 @@ jobs:
       name: pypi
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set release version
+        shell: bash
+        run: |
+          set -euo pipefail
+          REF=""
+          if [ -n "${{ github.event.release.tag_name }}" ]; then
+            REF="${{ github.event.release.tag_name }}"
+          else
+            REF="${GITHUB_REF#refs/*/}"
+          fi
+          RELEASE_VERSION="${REF#v}"
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
+          echo "Derived RELEASE_VERSION=$RELEASE_VERSION"
       - name: Set up Python
         uses: actions/setup-python@v4
         with:

@@ -7,11 +7,13 @@ import sys
 import json
 from pathlib import Path
 import click
+from . import __version__
 from .task_manager import TaskManager
 from .search import TaskSearcher
 
 
 @click.group()
+@click.version_option(__version__, prog_name="CopilotTaskMaster")
 @click.option('--tasks-dir', default=None, help='Path to tasks directory')
 @click.pass_context
 def main(ctx, tasks_dir):
