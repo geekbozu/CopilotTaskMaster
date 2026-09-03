@@ -1,6 +1,7 @@
 """
 Utilities for TaskMaster shared by CLI and MCP adapters
 """
+
 from typing import Any
 
 
